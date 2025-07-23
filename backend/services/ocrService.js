@@ -4,10 +4,35 @@ const { processWithGemini } = require('./geminiService');
 const { AppError } = require('../middleware/errorHandler');
 
 // Initialize Google Cloud Vision client
-const client = new vision.ImageAnnotatorClient({
-    keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
-    projectId: process.env.GOOGLE_CLOUD_PROJECT_ID
-});
+let client;
+
+function initializeVisionClient() {
+    if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+        // Use service account key from environment variable (for cloud deployment)
+        const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+        client = new vision.ImageAnnotatorClient({
+            credentials: serviceAccount,
+            projectId: process.env.GOOGLE_CLOUD_PROJECT_ID
+        });
+    } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+        // Use service account file path (for local development)
+        client = new vision.ImageAnnotatorClient({
+            keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+            projectId: process.env.GOOGLE_CLOUD_PROJECT_ID
+        });
+    } else {
+        throw new Error('Google Cloud credentials not configured. Set FIREBASE_SERVICE_ACCOUNT_KEY or GOOGLE_APPLICATION_CREDENTIALS');
+    }
+    return client;
+}
+
+// Initialize the client
+try {
+    initializeVisionClient();
+    console.log('Google Cloud Vision client initialized successfully');
+} catch (error) {
+    console.error('Google Cloud Vision client initialization failed:', error.message);
+}
 
 /**
  * Process property notice image using Google Cloud Vision API + Gemini AI ONLY
